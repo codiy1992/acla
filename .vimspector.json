@@ -1,0 +1,13 @@
+{
+    "configurations": {
+        "run": {
+            "adapter": "delve", // "delve" or "vscode-go"
+            "configuration": {
+                "request": "launch",
+                "program": "${fileDirname}",
+                "mode": "debug",
+                "dlvToolPath": "$HOME/go/bin/dlv"
+            }
+        }
+    }
+}
