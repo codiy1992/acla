@@ -1,7 +1,9 @@
 {
     "configurations": {
         "run": {
-            "adapter": "delve", // "delve" or "vscode-go"
+            "adapter": "delve",
+            "filetypes": ["go"],
+            "variables": {},
             "configuration": {
                 "request": "launch",
                 "program": "${fileDirname}",

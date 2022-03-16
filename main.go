@@ -1,23 +1,30 @@
 package main
 
 import (
-	"context"
+	"acla/internal"
 	"flag"
-	"log"
-
-	"github.com/leonhfr/anki-connect-go"
+	"strings"
 )
 
 var flagDeckName = flag.String("deck", "current", "deck name")
+var flagModelName = flag.String("model", "", "model name(note type)")
+var flagFieldName = flag.String("field", "", "filed name")
+var flagFieldValue = flag.String("vaule", "", "filed value")
+var flagQuery = flag.String("query", "", "query string")
+var flagTags = flag.String("tags", "", "tags")
 
 func main() {
 	flag.Parse()
-	client := anki.NewDefaultClient()
-	notes, _ := client.FindNotes(context.TODO(), "deck:English Word:prevent")
-	res2, _ := client.NotesInfo(context.TODO(), notes)
-	log.Println(res2)
-	// if deckName := *flagDeckName; deckName != "" {
-	// log.Printf("Please specify the deck name!")
-	// return
-	// }
+
+	if *flagQuery == "" {
+		internal.CreateNote(
+			*flagDeckName,
+			*flagModelName,
+			*flagFieldName,
+			*flagFieldValue,
+			strings.Split(*flagTags, ","),
+		)
+	} else {
+		internal.UpdateFiled(*flagQuery, *flagFieldName, *flagFieldValue, false)
+	}
 }
