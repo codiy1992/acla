@@ -25,6 +25,6 @@ func main() {
 			strings.Split(*flagTags, ","),
 		)
 	} else {
-		internal.UpdateFiled(*flagQuery, *flagFieldName, *flagFieldValue, false)
+		internal.UpdateFiled(*flagQuery, *flagFieldName, *flagFieldValue, true)
 	}
 }
