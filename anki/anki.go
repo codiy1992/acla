@@ -34,7 +34,10 @@ func AddNote(deck string, model string, fields map[string]string, tags []string)
 
 	for field, value := range fields {
 		if strings.HasSuffix(field, "s") {
-			fields[field] = "<ul><li>" + value + "</li></ul>"
+			re := regexp.MustCompile(`<\s*img[^>]*>`)
+			if !re.MatchString(value) {
+				fields[field] = "<ul><li>" + value + "</li></ul>"
+			}
 		}
 	}
 	note := anki.NoteInput{
@@ -79,8 +82,12 @@ func UpdateNote(query string, fields map[string]string, tags []string, override 
 				log.Fatalf("field `%s` doesn't exists", field)
 			}
 			original := res2[0].Fields[field].(map[string]interface{})
+			fields[field] = strings.TrimRight(original["value"].(string), "\n") + "\n" + value
 			if strings.Trim(original["value"].(string), "\n ") == "" {
-				fields[field] = "<ul><li>" + value + "</li></ul>"
+				re := regexp.MustCompile(`<\s*img[^>]*>`)
+				if !re.MatchString(value) {
+					fields[field] = "<ul><li>" + value + "</li></ul>"
+				}
 			} else {
 				re := regexp.MustCompile(`</li>[^<]*</ul>`)
 				if re.MatchString(original["value"].(string)) {
@@ -88,8 +95,6 @@ func UpdateNote(query string, fields map[string]string, tags []string, override 
 						original["value"].(string),
 						"</li><li>"+value+"</li></ul>",
 					)
-				} else {
-					fields[field] = strings.TrimRight(original["value"].(string), "\n") + "\n" + value
 				}
 			}
 		}
