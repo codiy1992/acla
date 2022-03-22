@@ -1,15 +1,21 @@
-package internal
+package anki
 
 import (
 	"context"
 	"log"
+	"regexp"
+	"strings"
 
 	"github.com/leonhfr/anki-connect-go"
 )
 
 var client anki.Client
 
-func IsFirstField(model string, fieldName string) bool {
+func init() {
+	client = *anki.NewDefaultClient()
+}
+
+func IsMainField(model string, fieldName string) bool {
 	fields, err := client.ModelFieldNames(context.TODO(), model)
 	if err != nil {
 		log.Fatalf("Something went wrong: %v", err)
@@ -24,13 +30,11 @@ func IsFirstField(model string, fieldName string) bool {
 	return true
 }
 
-func CreateNote(deck string, model string, fieldName string, fieldValue string, tags []string) int {
+func AddNote(deck string, model string, fields map[string]string, tags []string) int {
 	note := anki.NoteInput{
-		Deck:  deck,
-		Model: model,
-		Fields: map[string]interface{}{
-			fieldName: fieldValue,
-		},
+		Deck:   deck,
+		Model:  model,
+		Fields: fields,
 		Options: map[string]interface{}{
 			"allowDuplicate": false,
 			"duplicateScope": "deck",
@@ -51,7 +55,7 @@ func CreateNote(deck string, model string, fieldName string, fieldValue string, 
 	return noteId
 }
 
-func UpdateFiled(query string, fieldName string, fieldValue string, append bool) {
+func UpdateNote(query string, fields map[string]string, tags []string, override bool) {
 
 	notes, _ := client.FindNotes(context.TODO(), query)
 
@@ -62,19 +66,23 @@ func UpdateFiled(query string, fieldName string, fieldValue string, append bool)
 		log.Fatalf("More than one note found!")
 	}
 
-	fields := map[string]interface{}{
-		fieldName: fieldValue,
-	}
-
-	if append {
+	if !override {
 		res2, _ := client.NotesInfo(context.TODO(), notes)
-
-		if res2[0].Fields[fieldName] == nil {
-			log.Fatalf("field `%s` doesn't exists", fieldName)
+		for field, value := range fields {
+			if res2[0].Fields[field] == nil {
+				log.Fatalf("field `%s` doesn't exists", field)
+			}
+			original := res2[0].Fields[field].(map[string]interface{})
+			re := regexp.MustCompile(`</li>[^<]*</ul>`)
+			if re.MatchString(original["value"].(string)) {
+				fields[field] = re.ReplaceAllString(
+					original["value"].(string),
+					"</li><li>"+value+"</li></ul>",
+				)
+			} else {
+				fields[field] = strings.TrimRight(original["value"].(string), "\n") + "\n" + value
+			}
 		}
-		original := res2[0].Fields[fieldName].(map[string]interface{})
-
-		fields[fieldName] = original["value"].(string) + fieldValue
 	}
 
 	note := anki.NoteFieldsInput{
@@ -85,8 +93,6 @@ func UpdateFiled(query string, fieldName string, fieldValue string, append bool)
 	if err := client.UpdateNote(context.TODO(), note); err != nil {
 		log.Println("update failed:", err)
 	}
-}
 
-func init() {
-	client = *anki.NewDefaultClient()
+	// TODO addTags
 }

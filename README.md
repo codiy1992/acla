@@ -1,3 +1,3 @@
-# ACLA(Anki Command-Line Assistant)
+# ACLT(Anki Command-Line Tool)
 
 
