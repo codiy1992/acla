@@ -13,7 +13,7 @@
                 "args": [
                     "note",
                     "--query",
-                    "deck:english word:massive",
+                    "deck:english word:golang",
                     "--field",
                     "Examples:xxxxx"
                 ],
