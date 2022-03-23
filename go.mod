@@ -3,7 +3,7 @@ module aclt
 go 1.17
 
 require (
-	github.com/leonhfr/anki-connect-go v0.0.2
+	github.com/codiy1992/anki-connect-go v0.0.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.10.1
@@ -27,4 +27,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/leonhfr/anki-connect-go => ../anki-connect-go
+replace github.com/codiy1992/anki-connect-go => ../anki-connect-go

@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/leonhfr/anki-connect-go"
+	"github.com/codiy1992/anki-connect-go"
 )
 
 var client anki.Client
@@ -16,7 +16,7 @@ func init() {
 }
 
 func IsMainField(model string, fieldName string) bool {
-	fields, err := client.ModelFieldNames(context.TODO(), model)
+	fields, err := client.ModelFieldNames(model)
 	if err != nil {
 		log.Fatalf("Something went wrong: %v", err)
 	}
@@ -55,7 +55,7 @@ func AddNote(deck string, model string, fields map[string]string, tags []string)
 		},
 		Tags: tags,
 	}
-	noteId, err := client.AddNote(context.TODO(), note)
+	noteId, err := client.AddNote(note)
 	if err != nil {
 		log.Fatalf("Create note failed: %s", err)
 	}
@@ -66,7 +66,7 @@ func AddNote(deck string, model string, fields map[string]string, tags []string)
 
 func UpdateNote(query string, fields map[string]string, tags []string, override bool) {
 
-	notes, _ := client.FindNotes(context.TODO(), query)
+	notes, _ := client.FindNotes(query)
 
 	if len(notes) == 0 {
 		log.Fatalf("No notes found!")
@@ -76,9 +76,9 @@ func UpdateNote(query string, fields map[string]string, tags []string, override 
 	}
 
 	if !override {
-		res2, _ := client.NotesInfo(context.TODO(), notes)
+		res2, _ := client.NotesInfo(notes)
 		for field, value := range fields {
-			if res2[0].Fields[field] == nil {
+			if res2[0].Fields[field] == "" {
 				log.Fatalf("field `%s` doesn't exists", field)
 			}
 			original := res2[0].Fields[field].(map[string]interface{})
@@ -105,7 +105,7 @@ func UpdateNote(query string, fields map[string]string, tags []string, override 
 		Fields: fields,
 	}
 
-	if err := client.UpdateNote(context.TODO(), note); err != nil {
+	if err := client.UpdateNote(note); err != nil {
 		log.Println("update failed:", err)
 	}
 
