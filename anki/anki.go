@@ -1,7 +1,6 @@
 package anki
 
 import (
-	"context"
 	"log"
 	"regexp"
 	"strings"
@@ -13,6 +12,10 @@ var client anki.Client
 
 func init() {
 	client = *anki.NewDefaultClient()
+}
+
+func Client() *anki.Client {
+	return &client
 }
 
 func IsMainField(model string, fieldName string) bool {
@@ -59,8 +62,6 @@ func AddNote(deck string, model string, fields map[string]string, tags []string)
 	if err != nil {
 		log.Fatalf("Create note failed: %s", err)
 	}
-
-	client.Suspend(context.TODO(), []int{noteId})
 	return noteId
 }
 
@@ -110,4 +111,26 @@ func UpdateNote(query string, fields map[string]string, tags []string, override 
 	}
 
 	// TODO addTags
+}
+
+func SuspendCard(query string) bool {
+	cardIds, err := client.FindCards(query)
+	if err != nil {
+		log.Fatalf("FindCards failed with query string `%s`", query)
+	}
+	if len(cardIds) > 1 {
+		log.Fatalf("Found more than one cards, please check your query string `%s`", query)
+	}
+	suspended, err := client.Suspended(cardIds[0])
+	if err != nil {
+		log.Fatalf("Cloud not check card %d suspended or not", cardIds[0])
+	}
+	if suspended {
+		return true
+	}
+	result, err := client.Suspend(cardIds)
+	if err != nil {
+		log.Fatalf("Cards %v suspend failed: %s", cardIds, err)
+	}
+	return result
 }

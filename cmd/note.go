@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"aclt/anki"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -74,15 +75,30 @@ var noteCmd = &cobra.Command{
 			if len(tags) > 0 {
 				// TODO removeTags
 			} else {
-				// TODO deleteNote
+				noteIds, _ := anki.Client().FindNotes(query)
+				anki.Client().DeleteNotes(noteIds)
+				return
 			}
 		} else {
 			if query != "" && len(fieldArray) == 0 && len(tags) == 0 {
-				// TODO noteInfo
+				noteIds, _ := anki.Client().FindNotes(query)
+				notes, _ := anki.Client().NotesInfo(noteIds)
+				json, err := json.Marshal(notes)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				fmt.Println(string(json))
+				return
 			}
 
 			if query == "" && len(fieldArray) > 0 {
 				anki.AddNote(deck, model, fields, tags)
+				queryString := fmt.Sprintf("deck:%s", deck)
+				for field, value := range fields {
+					queryString += fmt.Sprintf(" %s:%s", field, value)
+				}
+				anki.SuspendCard(queryString)
 			}
 
 			if query != "" {
