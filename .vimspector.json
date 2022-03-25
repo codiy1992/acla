@@ -9,14 +9,8 @@
                 "mode": "debug",
                 "dlvToolPath": "$HOME/go/bin/dlv",
                 "cwd": "${workspaceRoot}",
-                "program": "${fileDirname}",
-                "args": [
-                    "note",
-                    "--query",
-                    "deck:english word:golang",
-                    "--field",
-                    "Examples:xxxxx"
-                ],
+                "program": "main.go",
+                "args": ["dict"],
                 "environment": []
             }
         }
