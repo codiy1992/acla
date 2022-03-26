@@ -1,18 +1,30 @@
 package dict
 
 import (
-	"encoding/json"
-	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/antchfx/htmlquery"
 	"golang.org/x/net/html"
 )
 
+const CAMBRIDGE_URL = "https://dictionary.cambridge.org"
+
+type Cambridge struct{}
+
 type Vocabulary struct {
-	Dictionary    string                   `json:"dictionary"`
-	Pronunciation map[string]Pronunciation `json:"pronunciation"`
-	Definitions   []Definition             `json:"definitions"`
-	Examples      []string                 `json:"examples"`
+	Dictionary string  `json:"dictionary"`
+	Word       string  `json:"word"`
+	Entries    []Entry `json:"entries"`
+}
+
+type Entry struct {
+	Word           string                   `json:"word"`
+	PartOfSpeech   string                   `json:"partOfSpeech"`
+	POSLabel       string                   `json:"posLabel"`
+	Pronunciations map[string]Pronunciation `json:"pronunciations"`
+	Definitions    []Definition             `json:"definitions"`
+	Examples       []string                 `json:"examples"`
 }
 
 type Pronunciation struct {
@@ -22,14 +34,23 @@ type Pronunciation struct {
 }
 
 type Definition struct {
-	Definition string   `json:"definition"`
-	Images     []string `json:"images"`
-	Examples   []string `json:"examples"`
-	Thesaurus  []string `json:"thesaurus"`
+	Definition  string      `json:"definition"`
+	Images      []string    `json:"images"`
+	Examples    []string    `json:"examples"`
+	Thesauruses []Thesaurus `json:"thesauruses"`
 }
 
-func Query(vocab string) []Vocabulary {
-	doc, err := htmlquery.LoadURL("https://dictionary.cambridge.org/us/dictionary/english/" + vocab)
+type Thesaurus struct {
+	Word    string `json:"word"`
+	Example string `json:"example"`
+}
+
+func NewCambridge() *Cambridge {
+	return &Cambridge{}
+}
+
+func (c Cambridge) Query(vocab string) []Vocabulary {
+	doc, err := htmlquery.LoadURL(CAMBRIDGE_URL + "/us/dictionary/english/" + vocab)
 	if err != nil {
 		panic(err)
 	}
@@ -40,112 +61,171 @@ func Query(vocab string) []Vocabulary {
 	var result []Vocabulary
 	for _, dictionary := range dictionaries {
 		Vocabulary := Vocabulary{}
-		Vocabulary.Dictionary = "Advanced Learner's Dictionary"
-		dictName, _ := htmlquery.Query(dictionary, `//div[@class="di-title di_t"]/h2[contains(., "Intermediate")]`)
+		Vocabulary.Word = vocab
+
+		// dictionary
+		Vocabulary.Dictionary = "Cambridge Advanced Learner's Dictionary & Thesaurus"
+		dictName, _ := htmlquery.Query(
+			dictionary, `//div[@class="di-title di_t"]/h2[contains(., "Intermediate")]`,
+		)
 		if dictName != nil {
-			Vocabulary.Dictionary = "Intermediate English Dictionary"
-			fmt.Println("--------------------> Intermediate English Dictionary")
+			Vocabulary.Dictionary = "Cambridge Academic Content Dictionary(Intermediate English)"
 		} else {
-			dictName, _ := htmlquery.Query(dictionary, `//div[@class="di-title di_t"]/h2[contains(., "Business")]`)
+			dictName, _ := htmlquery.Query(
+				dictionary, `//div[@class="di-title di_t"]/h2[contains(., "Business")]`,
+			)
 			if dictName != nil {
-				Vocabulary.Dictionary = "Business English Dictionary"
-				fmt.Println("--------------------> Business English Dictionary")
+				Vocabulary.Dictionary = "Cambridge Business English Dictionary"
 			}
 		}
 
-		entry_body, _ := htmlquery.Query(dictionary, `//div[@class="entry-body"]`)
-		fmt.Println("---------- entry body ----------")
-		Vocabulary.Pronunciation = ParsePronuns(entry_body)
-		// definitions
-		fmt.Println("----- definitions -----")
-		definitions, _ := htmlquery.QueryAll(entry_body, `//div[@class="def-block ddef_block "]`)
-		for _, definition := range definitions {
-			Vocabulary.Definitions = append(Vocabulary.Definitions, ParseDefinition(definition))
+		// entries
+		entries, _ := htmlquery.QueryAll(dictionary, `//div[@class="entry-body"]/div[@class="pr entry-body__el"]`)
+		for _, entry := range entries {
+			Vocabulary.Entries = append(Vocabulary.Entries, c.ParseEntry(entry))
 		}
-		fmt.Println("----- definitions -----")
-		// more examples
-		examples, _ := htmlquery.QueryAll(entry_body, `//div[contains(@class, "sense-body")]/div[@class="daccord"]//section/ul/li[@class="eg dexamp hax"]`)
-		for _, example := range examples {
-			Vocabulary.Examples = append(Vocabulary.Examples, htmlquery.InnerText(example))
-		}
-		fmt.Println("---------- entry body ----------")
 
 		result = append(result, Vocabulary)
 	}
-	json, _ := json.Marshal(result)
-	fmt.Println(string(json))
 	return result
 }
 
-func ParsePronuns(node *html.Node) map[string]Pronunciation {
+func (c Cambridge) ParseEntry(node *html.Node) Entry {
+	Entry := Entry{}
+
+	// word
+	word, _ := htmlquery.Query(node, `//div[@class="di-title"]/span/span`)
+	if word != nil {
+		Entry.Word = strings.Trim(htmlquery.InnerText(word), " ")
+	}
+
+	// part of speech
+	partOfSpeech, _ := htmlquery.Query(
+		node, `//div[contains(@class, "posgram")]/span[contains(@class, "pos")]`,
+	)
+	if partOfSpeech != nil {
+		Entry.PartOfSpeech = strings.Trim(htmlquery.InnerText(partOfSpeech), " ")
+	}
+
+	// part of speech label
+	posLabel, _ := htmlquery.Query(
+		node, `//div[contains(@class, "posgram")]/span[contains(@class, "gram")]/a/span`,
+	)
+	if posLabel != nil {
+		Entry.POSLabel = "[" + strings.Trim(htmlquery.InnerText(posLabel), " ") + "]"
+	}
+
+	// pronunciations
+	Entry.Pronunciations = c.ParsePronuns(node)
+
+	// definitions
+	definitions, _ := htmlquery.QueryAll(node, `//div[@class="def-block ddef_block "]`)
+	for _, definition := range definitions {
+		Entry.Definitions = append(Entry.Definitions, c.ParseDefinition(definition))
+	}
+
+	// examples
+	examples, _ := htmlquery.QueryAll(
+		node,
+		`//div[contains(@class, "sense-body")]/div[@class="daccord"]//section/ul/li[@class="eg dexamp hax"]`,
+	)
+	for _, example := range examples {
+		Entry.Examples = append(
+			Entry.Examples, strings.Trim(htmlquery.InnerText(example), " "),
+		)
+	}
+	return Entry
+}
+
+func (c Cambridge) ParsePronuns(node *html.Node) map[string]Pronunciation {
 	result := make(map[string]Pronunciation)
 
-	ipa_us, _ := htmlquery.Query(node, `//span[@class="us dpron-i "][1]//span[contains(@class, "ipa")]`)
-	if ipa_us != nil {
+	ipaUs, _ := htmlquery.Query(
+		node, `//span[@class="us dpron-i "][1]//span[contains(@class, "ipa")]`,
+	)
+	if ipaUs != nil {
 		Pronunciation := Pronunciation{}
-		Pronunciation.Ipa = htmlquery.InnerText(ipa_us)
-		fmt.Println(htmlquery.InnerText(ipa_us))
+		Pronunciation.Ipa = htmlquery.InnerText(ipaUs)
 
-		audio_mp3, _ := htmlquery.Query(node, `//span[@class="us dpron-i "][1]//source[@type="audio/mpeg"]`)
+		audio_mp3, _ := htmlquery.Query(
+			node, `//span[@class="us dpron-i "][1]//source[@type="audio/mpeg"]`,
+		)
 		if audio_mp3 != nil {
-			Pronunciation.Mp3 = htmlquery.SelectAttr(audio_mp3, "src")
-			fmt.Println(htmlquery.SelectAttr(audio_mp3, "src"))
+			Pronunciation.Mp3 = CAMBRIDGE_URL + htmlquery.SelectAttr(audio_mp3, "src")
 		}
-		audio_ogg, _ := htmlquery.Query(node, `//span[@class="us dpron-i "][1]//source[@type="audio/ogg"]`)
+		audio_ogg, _ := htmlquery.Query(
+			node, `//span[@class="us dpron-i "][1]//source[@type="audio/ogg"]`,
+		)
 		if audio_ogg != nil {
-			Pronunciation.Ogg = htmlquery.SelectAttr(audio_ogg, "src")
-			fmt.Println(htmlquery.SelectAttr(audio_ogg, "src"))
+			Pronunciation.Ogg = CAMBRIDGE_URL + htmlquery.SelectAttr(audio_ogg, "src")
 		}
 		result["us"] = Pronunciation
 	}
 
-	ipa_uk, _ := htmlquery.Query(node, `//span[@class="uk dpron-i "][1]//span[contains(@class, "ipa")]`)
-	if ipa_uk != nil {
+	ipaUk, _ := htmlquery.Query(
+		node, `//span[@class="uk dpron-i "][1]//span[contains(@class, "ipa")]`,
+	)
+	if ipaUk != nil {
 		Pronunciation := Pronunciation{}
-		Pronunciation.Ipa = htmlquery.InnerText(ipa_us)
-		fmt.Println(htmlquery.InnerText(ipa_uk))
-		audio_mp3, _ := htmlquery.Query(node, `//span[@class="uk dpron-i "][1]//source[@type="audio/mpeg"]`)
+		Pronunciation.Ipa = htmlquery.InnerText(ipaUk)
+		audio_mp3, _ := htmlquery.Query(
+			node, `//span[@class="uk dpron-i "][1]//source[@type="audio/mpeg"]`,
+		)
 		if audio_mp3 != nil {
-			Pronunciation.Mp3 = htmlquery.SelectAttr(audio_mp3, "src")
-			fmt.Println(htmlquery.SelectAttr(audio_mp3, "src"))
+			Pronunciation.Mp3 = CAMBRIDGE_URL + htmlquery.SelectAttr(audio_mp3, "src")
 		}
-		audio_ogg, _ := htmlquery.Query(node, `//span[@class="uk dpron-i "][1]//source[@type="audio/ogg"]`)
+		audio_ogg, _ := htmlquery.Query(
+			node, `//span[@class="uk dpron-i "][1]//source[@type="audio/ogg"]`,
+		)
 		if audio_ogg != nil {
-			Pronunciation.Ogg = htmlquery.SelectAttr(audio_ogg, "src")
-			fmt.Println(htmlquery.SelectAttr(audio_ogg, "src"))
+			Pronunciation.Ogg = CAMBRIDGE_URL + htmlquery.SelectAttr(audio_ogg, "src")
 		}
 		result["uk"] = Pronunciation
 	}
 	return result
 }
 
-func ParseDefinition(node *html.Node) Definition {
+func (c Cambridge) ParseDefinition(node *html.Node) Definition {
 	Definition := Definition{}
-	define, _ := htmlquery.Query(node, `//div[@class="def ddef_d db"]`)
-	if define != nil {
-		Definition.Definition = htmlquery.InnerText(define)
-		fmt.Println(htmlquery.InnerText(define))
+	// definition
+	definition, _ := htmlquery.Query(node, `//div[@class="def ddef_d db"]`)
+	if definition != nil {
+		Definition.Definition = strings.Trim(htmlquery.InnerText(definition), ": ") + "."
 	}
 
 	// images
 	images, _ := htmlquery.QueryAll(node, `//div[@class="dimg"]//amp-img`)
+	re := regexp.MustCompile(`(?mi)src:\s*'([^']+)'`)
 	for _, image := range images {
-		Definition.Images = append(Definition.Images, htmlquery.SelectAttr(image, "on"))
-		fmt.Println(htmlquery.SelectAttr(image, "on"))
+		image := htmlquery.SelectAttr(image, "on")
+		matchs := re.FindStringSubmatch(image)
+		if len(matchs) > 1 {
+			Definition.Images = append(Definition.Images, CAMBRIDGE_URL+matchs[1])
+		}
 	}
 
 	// examples
 	examples, _ := htmlquery.QueryAll(node, `//div[@class="examp dexamp"]`)
 	for _, example := range examples {
-		Definition.Examples = append(Definition.Examples, htmlquery.InnerText(example))
-		fmt.Println(htmlquery.InnerText(example))
+		value := strings.Trim(htmlquery.InnerText(example), " ")
+		value = strings.Replace(value, "[ ", "[", 1)
+		value = strings.Replace(value, " ]", "]", 1)
+		Definition.Examples = append(Definition.Examples, value)
 	}
 
 	// thesaurus
-	thesaurus, _ := htmlquery.Query(node, `//section//header[contains(., "Thesaurus")]`)
-	if thesaurus != nil {
-		Definition.Thesaurus = append(Definition.Thesaurus, htmlquery.InnerText(thesaurus))
-		fmt.Println(htmlquery.InnerText(thesaurus))
+	thesaurus, _ := htmlquery.QueryAll(
+		node, `//section//div[@class="daccord_lb"]//ul/li[@class="had t-i"]`,
+	)
+	for _, thes := range thesaurus {
+		Thesaurus := Thesaurus{}
+		word, _ := htmlquery.Query(thes, `//a`)
+		example, _ := htmlquery.Query(thes, `//span[@class="example dexample"]`)
+		if word != nil && example != nil {
+			Thesaurus.Word = strings.Trim(htmlquery.InnerText(word), " ")
+			Thesaurus.Example = strings.Trim(htmlquery.InnerText(example), " ")
+			Definition.Thesauruses = append(Definition.Thesauruses, Thesaurus)
+		}
 	}
 	return Definition
 }
