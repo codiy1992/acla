@@ -3,6 +3,7 @@ package dict
 import (
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/antchfx/htmlquery"
 	"golang.org/x/net/html"
@@ -10,6 +11,7 @@ import (
 
 // Help Codes: https://dictionary.cambridge.org/us/help/codes.html
 const CAMBRIDGE_URL = "https://dictionary.cambridge.org"
+const Version = "2022.03.27.001"
 
 type Cambridge struct{}
 
@@ -17,6 +19,8 @@ type Vocabulary struct {
 	Dictionary string  `json:"dictionary"`
 	Word       string  `json:"word"`
 	Entries    []Entry `json:"entries"`
+	Version    string  `json:"version"`
+	Date       string  `json:"date"`
 }
 
 type Entry struct {
@@ -64,6 +68,8 @@ func (c Cambridge) Query(vocab string) []Vocabulary {
 	for _, dictionary := range dictionaries {
 		Vocabulary := Vocabulary{}
 		Vocabulary.Word = vocab
+		Vocabulary.Version = Version
+		Vocabulary.Date = time.Now().Format("2006-01-02")
 
 		// dictionary
 		Vocabulary.Dictionary = "Cambridge Advanced Learner's Dictionary & Thesaurus"
