@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/html"
 )
 
+// Help Codes: https://dictionary.cambridge.org/us/help/codes.html
 const CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 
 type Cambridge struct{}
@@ -20,8 +21,9 @@ type Vocabulary struct {
 
 type Entry struct {
 	Word           string                   `json:"word"`
-	PartOfSpeech   string                   `json:"partOfSpeech"`
-	POSLabel       string                   `json:"posLabel"`
+	IsIdiom        bool                     `json:"isIdiom"`
+	PartOfSpeechs  []string                 `json:"partOfSpeechs"`
+	POSLabels      []string                 `json:"posLabels"`
 	Pronunciations map[string]Pronunciation `json:"pronunciations"`
 	Definitions    []Definition             `json:"definitions"`
 	Examples       []string                 `json:"examples"`
@@ -80,9 +82,17 @@ func (c Cambridge) Query(vocab string) []Vocabulary {
 		}
 
 		// entries
-		entries, _ := htmlquery.QueryAll(dictionary, `//div[@class="entry-body"]/div[@class="pr entry-body__el"]`)
+		entries, _ := htmlquery.QueryAll(dictionary, `//div[@class="entry-body"]/div[contains(@class, "entry-body__el")]`)
 		for _, entry := range entries {
-			Vocabulary.Entries = append(Vocabulary.Entries, c.ParseEntry(entry))
+			Vocabulary.Entries = append(Vocabulary.Entries, c.ParseEntry(entry, false))
+		}
+
+		// idiom
+		if entries == nil {
+			idioms, _ := htmlquery.QueryAll(dictionary, `//div[@class="idiom-block"]`)
+			for _, idiom := range idioms {
+				Vocabulary.Entries = append(Vocabulary.Entries, c.ParseEntry(idiom, true))
+			}
 		}
 
 		result = append(result, Vocabulary)
@@ -90,29 +100,36 @@ func (c Cambridge) Query(vocab string) []Vocabulary {
 	return result
 }
 
-func (c Cambridge) ParseEntry(node *html.Node) Entry {
+func (c Cambridge) ParseEntry(node *html.Node, isIdiom bool) Entry {
 	Entry := Entry{}
-
+	Entry.IsIdiom = isIdiom
 	// word
-	word, _ := htmlquery.Query(node, `//div[@class="di-title"]/span/span`)
+	word, _ := htmlquery.Query(node, `//div[@class="di-title"]//.[contains(@class, "headword")]`)
 	if word != nil {
 		Entry.Word = strings.Trim(htmlquery.InnerText(word), " ")
 	}
 
 	// part of speech
-	partOfSpeech, _ := htmlquery.Query(
-		node, `//div[contains(@class, "posgram")]/span[contains(@class, "pos")]`,
+	partOfSpeechs, _ := htmlquery.QueryAll(
+		node, `//div[contains(@class, "pos-header")]//span[@class="pos dpos"]`,
 	)
-	if partOfSpeech != nil {
-		Entry.PartOfSpeech = strings.Trim(htmlquery.InnerText(partOfSpeech), " ")
+	for _, partOfSpeech := range partOfSpeechs {
+		Entry.PartOfSpeechs = append(
+			Entry.PartOfSpeechs,
+			strings.Trim(htmlquery.InnerText(partOfSpeech), " "),
+		)
 	}
 
 	// part of speech label
-	posLabel, _ := htmlquery.Query(
-		node, `//div[contains(@class, "posgram")]/span[contains(@class, "gram")]/a/span`,
+	posLabels, _ := htmlquery.QueryAll(
+		node, `//div[contains(@class, "pos-header")]//span[@class="gram dgram"]/a/span`,
 	)
-	if posLabel != nil {
-		Entry.POSLabel = "[" + strings.Trim(htmlquery.InnerText(posLabel), " ") + "]"
+	for _, posLabel := range posLabels {
+		value := strings.Trim(htmlquery.InnerText(posLabel), " ")
+		Entry.POSLabels = append(
+			Entry.POSLabels,
+			"["+value+"]",
+		)
 	}
 
 	// pronunciations
