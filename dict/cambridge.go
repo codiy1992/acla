@@ -11,50 +11,14 @@ import (
 
 // Help Codes: https://dictionary.cambridge.org/us/help/codes.html
 const CAMBRIDGE_URL = "https://dictionary.cambridge.org"
-const Version = "2022.03.27.001"
 
 type Cambridge struct{}
-
-type Vocabulary struct {
-	Dictionary string  `json:"dictionary"`
-	Word       string  `json:"word"`
-	Entries    []Entry `json:"entries"`
-	Version    string  `json:"version"`
-	Date       string  `json:"date"`
-}
-
-type Entry struct {
-	Word           string                   `json:"word"`
-	IsIdiom        bool                     `json:"isIdiom"`
-	PartOfSpeechs  []string                 `json:"partOfSpeechs"`
-	POSLabels      []string                 `json:"posLabels"`
-	Pronunciations map[string]Pronunciation `json:"pronunciations"`
-	Definitions    []Definition             `json:"definitions"`
-	Examples       []string                 `json:"examples"`
-}
-
-type Pronunciation struct {
-	Ipa string `json:"ipa"`
-	Mp3 string `json:"mp3"`
-	Ogg string `json:"ogg"`
-}
-
-type Definition struct {
-	Definition  string      `json:"definition"`
-	Images      []string    `json:"images"`
-	Examples    []string    `json:"examples"`
-	Thesauruses []Thesaurus `json:"thesauruses"`
-}
-
-type Thesaurus struct {
-	Word    string `json:"word"`
-	Example string `json:"example"`
-}
 
 func NewCambridge() *Cambridge {
 	return &Cambridge{}
 }
 
+// prevent scaffold nephew interactive crying give-up at-any-cost
 func (c Cambridge) Query(vocab string) []Vocabulary {
 	doc, err := htmlquery.LoadURL(CAMBRIDGE_URL + "/us/dictionary/english/" + vocab)
 	if err != nil {
@@ -88,7 +52,9 @@ func (c Cambridge) Query(vocab string) []Vocabulary {
 		}
 
 		// entries
-		entries, _ := htmlquery.QueryAll(dictionary, `//div[@class="entry-body"]/div[contains(@class, "entry-body__el")]`)
+		entries, _ := htmlquery.QueryAll(
+			dictionary, `//div[@class="entry-body"]/div[contains(@class, "entry-body__el")]`,
+		)
 		for _, entry := range entries {
 			Vocabulary.Entries = append(Vocabulary.Entries, c.ParseEntry(entry, false))
 		}
@@ -142,7 +108,7 @@ func (c Cambridge) ParseEntry(node *html.Node, isIdiom bool) Entry {
 	Entry.Pronunciations = c.ParsePronuns(node)
 
 	// definitions
-	definitions, _ := htmlquery.QueryAll(node, `//div[@class="def-block ddef_block "]`)
+	definitions, _ := htmlquery.QueryAll(node, `//div[@class="pos-body"]`)
 	for _, definition := range definitions {
 		Entry.Definitions = append(Entry.Definitions, c.ParseDefinition(definition))
 	}

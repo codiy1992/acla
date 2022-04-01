@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"aclt/anki"
+	"aclt/dict"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,7 @@ var tags []string
 var override bool
 var remove bool
 var mainField string
+var withDict bool
 var fields map[string]string
 
 func init() {
@@ -40,6 +42,8 @@ func init() {
 	noteCmd.Flags().StringVarP(&mainField, "main-field", "M", "",
 		"The main field that can be used to find specific note exactly "+
 			"(Will be ignored when --query option is set)")
+	noteCmd.Flags().BoolVar(&withDict, "with-dictionary", false,
+		"")
 
 	noteCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		// split note ([]string) field:value into noteMap (map[string]string)
@@ -93,16 +97,17 @@ var noteCmd = &cobra.Command{
 			}
 
 			if query == "" && len(fieldArray) > 0 {
-				anki.AddNote(deck, model, fields, tags)
-				queryString := fmt.Sprintf("deck:%s", deck)
-				for field, value := range fields {
-					queryString += fmt.Sprintf(" %s:%s", field, value)
+				if withDict {
+					fields = dict.ToAnkiFields(word)
 				}
-				anki.SuspendCard(queryString)
+				anki.AddNote(deck, model, fields, tags)
 			}
 
 			if query != "" {
 				if len(fieldArray) > 0 || len(tags) > 0 {
+					if withDict {
+						fields = dict.ToAnkiFields(word)
+					}
 					anki.UpdateNote(query, fields, tags, override)
 				}
 			}
@@ -130,6 +135,10 @@ func checkFlags() error {
 
 	if !remove && query == "" && len(fieldArray) > 0 && model == "" {
 		return errors.New("flag --model required when excueting addNote action")
+	}
+
+	if withDict && mainField != "Word" {
+		return errors.New("withDict must work with xxxxxxx")
 	}
 	return nil
 }

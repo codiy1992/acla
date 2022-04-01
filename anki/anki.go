@@ -35,14 +35,6 @@ func IsMainField(model string, fieldName string) bool {
 
 func AddNote(deck string, model string, fields map[string]string, tags []string) int {
 
-	for field, value := range fields {
-		if strings.HasSuffix(field, "s") {
-			re := regexp.MustCompile(`<\s*img[^>]*>`)
-			if !re.MatchString(value) {
-				fields[field] = "<ul><li>" + value + "</li></ul>"
-			}
-		}
-	}
 	note := anki.NoteInput{
 		Deck:   deck,
 		Model:  model,
@@ -120,6 +112,9 @@ func SuspendCard(query string) bool {
 	}
 	if len(cardIds) > 1 {
 		log.Fatalf("Found more than one cards, please check your query string `%s`", query)
+	}
+	if len(cardIds) == 0 {
+		log.Fatalf("No cards found, please check your query string `%s`", query)
 	}
 	suspended, err := client.Suspended(cardIds[0])
 	if err != nil {

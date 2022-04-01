@@ -10,7 +10,7 @@
                 "dlvToolPath": "$HOME/go/bin/dlv",
                 "cwd": "${workspaceRoot}",
                 "program": "main.go",
-                "args": ["dict"],
+                "args": ["dict", "-w", "cardinal", "-f", "json"],
                 "environment": []
             }
         }

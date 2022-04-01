@@ -55,7 +55,7 @@ func initConfig() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
+		viper.SetConfigType("yaml")
 		viper.AddConfigPath(home + "/.config/aclt")
 		viper.SetConfigName("aclt") // Config name without extension
 	}

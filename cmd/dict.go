@@ -26,9 +26,7 @@ var dictCmd = &cobra.Command{
 	Long:  `Dictionary query tool`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// prevent scaffold nephew interactive crying give-up
-		// at-any-cost
-		result := dict.Query(source, word)
+		result := dict.Query(word)
 		if format != "yaml" {
 			json, _ := json.Marshal(result)
 			fmt.Println(string(json))
