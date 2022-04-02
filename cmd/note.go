@@ -77,7 +77,7 @@ func (c noteCmd) newCmd() *cobra.Command {
 				}
 
 				if c.query == "" && len(c.fieldArray) > 0 {
-					if c.withDict {
+					if c.dictQuery {
 						if word, exists := c.fields["Word"]; exists {
 							c.fields = dict.ToAnkiFields(word)
 						}
@@ -88,7 +88,7 @@ func (c noteCmd) newCmd() *cobra.Command {
 
 				if c.query != "" {
 					if len(c.fieldArray) > 0 || len(c.tags) > 0 {
-						if c.withDict {
+						if c.dictQuery {
 							if word, exists := c.fields["Word"]; exists {
 								c.fields = dict.ToAnkiFields(word)
 							}
@@ -149,7 +149,7 @@ func (c noteCmd) checkFlags() error {
 	}
 
 	if c.dictQuery && c.mainField != "Word" {
-		return errors.New("withDict must work with xxxxxxx")
+		return errors.New("dictQuery must work with xxxxxxx")
 	}
 	return nil
 }
