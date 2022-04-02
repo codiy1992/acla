@@ -99,7 +99,7 @@ func ToAnkiFields(word string) map[string]string {
 					examples = append(examples, fmt.Sprintf("<li>%s</li>", ex))
 				}
 				for _, th := range def.Thesauruses {
-					thesauruses = append(thesauruses, fmt.Sprintf("<li><%s> %s</li>", th.Word, th.Example))
+					thesauruses = append(thesauruses, fmt.Sprintf("<li><b>%s</b>: %s</li>", th.Word, th.Example))
 				}
 			}
 			if len(examples) == 0 {
