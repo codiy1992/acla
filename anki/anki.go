@@ -1,6 +1,7 @@
 package anki
 
 import (
+	"aclt/internal"
 	"log"
 	"regexp"
 	"strings"
@@ -16,21 +17,6 @@ func init() {
 
 func Client() *anki.Client {
 	return &client
-}
-
-func IsMainField(model string, fieldName string) bool {
-	fields, err := client.ModelFieldNames(model)
-	if err != nil {
-		log.Fatalf("Something went wrong: %v", err)
-	}
-	if len(fields) == 0 {
-		log.Fatalf("Model `%s` does not exist", model)
-	}
-	if fieldName != fields[0] {
-		log.Printf("filed `%s` does match first field `%s` of model `%s`", fieldName, fields[0], model)
-		return false
-	}
-	return true
 }
 
 func AddNote(deck string, model string, fields map[string]string, tags []string) int {
@@ -54,6 +40,8 @@ func AddNote(deck string, model string, fields map[string]string, tags []string)
 	if err != nil {
 		log.Fatalf("Create note failed: %s", err)
 	}
+	//
+	internal.Put(fields)
 	return noteId
 }
 
@@ -86,7 +74,7 @@ func UpdateNote(query string, fields map[string]string, tags []string, override 
 				if re.MatchString(original["value"].(string)) {
 					fields[field] = re.ReplaceAllString(
 						original["value"].(string),
-						"</li><li>"+value+"</li></ul>",
+						"</li>\n<li>"+value+"</li>\n</ul>",
 					)
 				}
 			}
@@ -102,6 +90,7 @@ func UpdateNote(query string, fields map[string]string, tags []string, override 
 		log.Println("update failed:", err)
 	}
 
+	internal.Put(fields)
 	// TODO addTags
 }
 

@@ -88,11 +88,6 @@ func (c noteCmd) newCmd() *cobra.Command {
 
 				if c.query != "" {
 					if len(c.fieldArray) > 0 || len(c.tags) > 0 {
-						if c.dictQuery {
-							if word, exists := c.fields["Word"]; exists {
-								c.fields = dict.ToAnkiFields(word)
-							}
-						}
 						anki.UpdateNote(c.query, c.fields, c.tags, c.override)
 					}
 				}
