@@ -83,12 +83,12 @@ func (c noteCmd) newCmd() *cobra.Command {
 						}
 					}
 					// jsonData, _ := json.Marshal(c.fields)
-					anki.AddNote(c.deck, c.model, c.fields, c.tags)
+					anki.AddVocab(c.deck, c.model, c.fields, c.tags)
 				}
 
 				if c.query != "" {
 					if len(c.fieldArray) > 0 || len(c.tags) > 0 {
-						anki.UpdateNote(c.query, c.fields, c.tags, c.override)
+						anki.UpdateVocab(c.query, c.fields, c.tags, c.override)
 					}
 				}
 			}
