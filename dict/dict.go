@@ -132,7 +132,7 @@ func dictMedias(word string, data []Vocabulary) map[string]string {
 					_, exists := medias[audio.Ogg]
 					if !exists {
 						medias[audio.Ogg] = fmt.Sprintf(
-							"dictionary/cambridge/"+word+"/%s-%d%d.ogg", k, i, j,
+							"dictionary/cambridge/"+word[:2]+"/"+word+"/%s-%d%d.ogg", k, i, j,
 						)
 					}
 					audio.Ogg = medias[audio.Ogg]
@@ -141,7 +141,7 @@ func dictMedias(word string, data []Vocabulary) map[string]string {
 					_, exists := medias[audio.Mp3]
 					if !exists {
 						medias[audio.Mp3] = fmt.Sprintf(
-							"dictionary/cambridge/"+word+"/%s-%d%d.mp3", k, i, j,
+							"dictionary/cambridge/"+word[:2]+"/"+word+"/%s-%d%d.mp3", k, i, j,
 						)
 					}
 					audio.Mp3 = medias[audio.Mp3]
@@ -156,7 +156,7 @@ func dictMedias(word string, data []Vocabulary) map[string]string {
 					_, exists := medias[image]
 					if !exists {
 						medias[image] = fmt.Sprintf(
-							"dictionary/cambridge/"+word+"/%d%d%d%d.%s", i, j, m, n, suffix,
+							"dictionary/cambridge/"+word[:2]+"/"+word+"/%d%d%d%d.%s", i, j, m, n, suffix,
 						)
 					}
 					definition.Images[n] = medias[image]
@@ -213,7 +213,7 @@ func uploadToS3(word string, data []Vocabulary, medias map[string]string) {
 		defer wg.Done()
 		_, err := client.PutObject(context.TODO(), &s3.PutObjectInput{
 			Bucket:      aws.String("s3.codiy.net"),
-			Key:         aws.String("dictionary/cambridge/" + word + "/data.json"),
+			Key:         aws.String("dictionary/cambridge/" + word[:2] + "/" + word + "/data.json"),
 			ACL:         types.ObjectCannedACLPublicRead,
 			Body:        bytes.NewReader(jsonData),
 			ContentType: aws.String("application/json"),
