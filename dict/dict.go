@@ -88,11 +88,15 @@ func ToAnkiFields(word string) map[string]string {
 		var examples []string
 		var thesauruses []string
 		for _, entry := range data[0].Entries {
-			if pronun_us, exists := entry.Pronunciations["us"]; exists {
-				fields["IPA"] = pronun_us.Ipa
+			if _, exists := fields["IPA"]; !exists {
+				if pronun_us, exists := entry.Pronunciations["us"]; exists {
+					fields["IPA"] = pronun_us.Ipa
+				}
 			}
-			fields["PartOfSpeech"] = fmt.Sprintf("%s %s",
-				strings.Join(entry.PartOfSpeechs, ","), strings.Join(entry.POSLabels, " "))
+			if _, exists := fields["PartOfSpeech"]; !exists {
+				fields["PartOfSpeech"] = fmt.Sprintf("%s %s",
+					strings.Join(entry.PartOfSpeechs, ","), strings.Join(entry.POSLabels, " "))
+			}
 			for _, def := range entry.Definitions {
 				definitions = append(definitions, fmt.Sprintf("<li>%s</li>", def.Definition))
 				for _, ex := range def.Examples {
